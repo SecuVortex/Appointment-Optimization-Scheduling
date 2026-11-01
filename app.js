@@ -1,357 +1,409 @@
-const { useState, useEffect } = React;
+/**
+ * Appointment Optimization & Scheduling System
+ * GLA University - Department of Computer Engineering & Applications
+ * Mini Project - 1 (Batch 06 - 3SD)
+ */
 
-const AVAILABLE_SLOTS = [
-  "09:00 AM",
-  "10:00 AM",
-  "11:00 AM",
-  "02:00 PM",
-  "03:00 PM",
-  "04:00 PM"
-];
+(function () {
+  "use strict";
 
-const SERVICES = [
-  "General Consultation",
-  "Specialist Consultation",
-  "Dental Checkup",
-  "Health Screening",
-  "Follow-up Visit"
-];
+  // Configuration
+  const STORAGE_KEY = "gla_appointment_records";
+  const TIME_SLOTS = [
+    "09:00 AM",
+    "10:00 AM",
+    "11:00 AM",
+    "02:00 PM",
+    "03:00 PM",
+    "04:00 PM"
+  ];
 
-function App() {
-  const [appointments, setAppointments] = useState([]);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    service: SERVICES[0],
-    date: "",
-    timeSlot: ""
-  });
-  const [message, setMessage] = useState(null);
+  // DOM Elements
+  const form = document.getElementById("appointment-form");
+  const userNameInput = document.getElementById("userName");
+  const userEmailInput = document.getElementById("userEmail");
+  const userPhoneInput = document.getElementById("userPhone");
+  const serviceTypeSelect = document.getElementById("serviceType");
+  const appointmentDateInput = document.getElementById("appointmentDate");
+  const selectedTimeSlotInput = document.getElementById("selectedTimeSlot");
+  const slotContainer = document.getElementById("slot-container");
+  const slotSummaryText = document.getElementById("slot-summary-text");
+  const appointmentsListEl = document.getElementById("appointments-list");
+  const alertContainer = document.getElementById("alert-container");
+  const searchInput = document.getElementById("search-input");
+  const filterBtns = document.querySelectorAll(".btn-filter");
 
-  // Load appointments from localStorage on mount
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("appointments");
-      if (stored) {
-        setAppointments(JSON.parse(stored));
+  // Stats Elements
+  const statTotal = document.getElementById("stat-total");
+  const statActive = document.getElementById("stat-active");
+  const statSlotsCount = document.getElementById("stat-slots-count");
+
+  // State
+  let appointments = [];
+  let currentFilter = "all";
+  let searchQuery = "";
+
+  // Helper: Format today as YYYY-MM-DD
+  function getTodayString(offsetDays = 0) {
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  // Pre-seed initial sample appointments if storage is empty
+  function loadInitialData() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      try {
+        appointments = JSON.parse(raw);
+        return;
+      } catch (e) {
+        console.error("Failed to parse appointments storage", e);
       }
-    } catch (err) {
-      console.error("Error reading localStorage:", err);
     }
-  }, []);
 
-  // Save appointments to localStorage whenever state updates
-  useEffect(() => {
-    try {
-      localStorage.setItem("appointments", JSON.stringify(appointments));
-    } catch (err) {
-      console.error("Error saving to localStorage:", err);
+    // Default sample appointments for immediate demonstration
+    const today = getTodayString(0);
+    const tomorrow = getTodayString(1);
+
+    appointments = [
+      {
+        id: "APT-2026-101",
+        name: "Aman Gupta",
+        email: "aman.gupta@example.com",
+        phone: "9876543210",
+        service: "General Consultation",
+        date: today,
+        timeSlot: "09:00 AM",
+        status: "Confirmed",
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: "APT-2026-102",
+        name: "Pooja Sharma",
+        email: "pooja.s@example.com",
+        phone: "9812345678",
+        service: "Dental Care",
+        date: today,
+        timeSlot: "11:00 AM",
+        status: "Confirmed",
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: "APT-2026-103",
+        name: "Vikram Malhotra",
+        email: "vikram.m@example.com",
+        phone: "9988776655",
+        service: "Cardiology Checkup",
+        date: tomorrow,
+        timeSlot: "02:00 PM",
+        status: "Confirmed",
+        createdAt: new Date().toISOString()
+      }
+    ];
+
+    saveAppointments();
+  }
+
+  function saveAppointments() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(appointments));
+    updateStats();
+  }
+
+  function updateStats() {
+    const total = appointments.length;
+    statTotal.textContent = total;
+    statActive.textContent = total;
+
+    const selectedDate = appointmentDateInput.value;
+    if (selectedDate) {
+      const bookedOnDate = appointments.filter((a) => a.date === selectedDate).length;
+      const freeOnDate = TIME_SLOTS.length - bookedOnDate;
+      statSlotsCount.textContent = `${freeOnDate} Left on ${selectedDate.slice(5)}`;
+    } else {
+      statSlotsCount.textContent = `${TIME_SLOTS.length} per day`;
     }
-  }, [appointments]);
+  }
 
-  // Determine booked slots for the currently selected date
-  const bookedSlotsForDate = formData.date
-    ? appointments
-        .filter((app) => app.date === formData.date)
-        .map((app) => app.timeSlot)
-    : [];
+  function showAlert(message, type = "success") {
+    alertContainer.innerHTML = `
+      <div class="alert alert-${type} alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi ${type === "success" ? "bi-check-circle-fill text-success" : "bi-exclamation-triangle-fill text-danger"} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    `;
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-      // Reset selected slot if date changes
-      ...(name === "date" ? { timeSlot: "" } : {})
-    }));
-    setMessage(null);
-  };
+    setTimeout(() => {
+      const alert = alertContainer.querySelector(".alert");
+      if (alert) {
+        alert.classList.remove("show");
+        setTimeout(() => alert.remove(), 200);
+      }
+    }, 4500);
+  }
 
-  const handleSlotSelect = (slot) => {
-    if (bookedSlotsForDate.includes(slot)) {
-      setMessage({ type: "danger", text: `Slot ${slot} is already booked for this date.` });
+  // Render Time Slot Buttons based on selected date
+  function renderSlots() {
+    const selectedDate = appointmentDateInput.value;
+    slotContainer.innerHTML = "";
+
+    if (!selectedDate) {
+      slotSummaryText.textContent = "Select date first";
+      slotSummaryText.className = "slot-summary text-muted";
+      selectedTimeSlotInput.value = "";
       return;
     }
-    setFormData((prev) => ({ ...prev, timeSlot: slot }));
-    setMessage(null);
-  };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+    const bookedSlots = appointments
+      .filter((a) => a.date === selectedDate)
+      .map((a) => a.timeSlot);
 
-    if (!formData.name.trim() || !formData.email.trim() || !formData.phone.trim()) {
-      setMessage({ type: "danger", text: "Please fill in all personal contact details." });
+    const availableCount = TIME_SLOTS.length - bookedSlots.length;
+    slotSummaryText.textContent = `${availableCount} of ${TIME_SLOTS.length} slots available`;
+    slotSummaryText.className = availableCount > 0 ? "slot-summary text-success" : "slot-summary text-danger";
+
+    TIME_SLOTS.forEach((slot) => {
+      const isBooked = bookedSlots.includes(slot);
+      const isSelected = selectedTimeSlotInput.value === slot;
+
+      const slotDiv = document.createElement("div");
+      slotDiv.className = `slot-item ${isBooked ? "booked" : ""} ${isSelected ? "selected" : ""}`;
+      slotDiv.innerHTML = `${slot} ${isBooked ? '<span class="badge bg-danger ms-1" style="font-size:0.6rem">Booked</span>' : ""}`;
+
+      if (!isBooked) {
+        slotDiv.addEventListener("click", () => {
+          selectedTimeSlotInput.value = slot;
+          renderSlots();
+        });
+      }
+
+      slotContainer.appendChild(slotDiv);
+    });
+
+    updateStats();
+  }
+
+  // Render Scheduled Appointments List
+  function renderAppointments() {
+    const today = getTodayString(0);
+
+    let filtered = appointments.filter((app) => {
+      // Search query filter
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matchesName = app.name.toLowerCase().includes(q);
+        const matchesPhone = app.phone.includes(q);
+        const matchesEmail = app.email.toLowerCase().includes(q);
+        const matchesService = app.service.toLowerCase().includes(q);
+        if (!matchesName && !matchesPhone && !matchesEmail && !matchesService) {
+          return false;
+        }
+      }
+
+      // Tab filter
+      if (currentFilter === "today") {
+        return app.date === today;
+      }
+      if (currentFilter === "upcoming") {
+        return app.date >= today;
+      }
+      return true;
+    });
+
+    // Sort by date then slot
+    filtered.sort((a, b) => (a.date + a.timeSlot).localeCompare(b.date + b.timeSlot));
+
+    appointmentsListEl.innerHTML = "";
+
+    if (filtered.length === 0) {
+      appointmentsListEl.innerHTML = `
+        <div class="empty-placeholder">
+          <i class="bi bi-calendar-x"></i>
+          <p class="mb-1 fw-semibold text-dark">No appointments found</p>
+          <small>No appointments match the selected filter or search.</small>
+        </div>
+      `;
       return;
     }
 
-    if (!formData.date) {
-      setMessage({ type: "danger", text: "Please select an appointment date." });
-      return;
-    }
+    filtered.forEach((app) => {
+      const item = document.createElement("div");
+      item.className = "appointment-entry";
+      item.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <span class="apt-token">${app.id}</span>
+              <span class="service-pill">${app.service}</span>
+              <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:0.65rem">Confirmed</span>
+            </div>
+            <div class="apt-name">${escapeHtml(app.name)}</div>
+            <div class="apt-meta mt-1">
+              <span class="me-3"><i class="bi bi-telephone me-1"></i>${escapeHtml(app.phone)}</span>
+              <span><i class="bi bi-envelope me-1"></i>${escapeHtml(app.email)}</span>
+            </div>
+            <div class="mt-2 fw-semibold" style="font-size: 0.88rem;">
+              <span class="text-primary me-3"><i class="bi bi-calendar-date me-1"></i>${app.date}</span>
+              <span class="text-dark"><i class="bi bi-clock me-1"></i>${app.timeSlot}</span>
+            </div>
+          </div>
+          <div>
+            <button class="btn btn-outline-danger btn-sm cancel-btn" data-id="${app.id}" title="Cancel booking">
+              <i class="bi bi-trash3 me-1"></i>Cancel
+            </button>
+          </div>
+        </div>
+      `;
 
-    if (!formData.timeSlot) {
-      setMessage({ type: "danger", text: "Please choose an available time slot." });
-      return;
-    }
+      appointmentsListEl.appendChild(item);
+    });
 
-    // Check conflict / duplicate booking
-    const isConflict = appointments.some(
-      (app) => app.date === formData.date && app.timeSlot === formData.timeSlot
-    );
-
-    if (isConflict) {
-      setMessage({
-        type: "danger",
-        text: "Duplicate booking detected. This slot has just been reserved."
+    // Attach cancel events
+    document.querySelectorAll(".cancel-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const id = e.currentTarget.getAttribute("data-id");
+        cancelAppointment(id);
       });
-      return;
-    }
-
-    const newAppointment = {
-      id: "APT-" + Date.now(),
-      name: formData.name.trim(),
-      email: formData.email.trim(),
-      phone: formData.phone.trim(),
-      service: formData.service,
-      date: formData.date,
-      timeSlot: formData.timeSlot,
-      bookedAt: new Date().toLocaleDateString()
-    };
-
-    setAppointments((prev) => [newAppointment, ...prev]);
-    setMessage({
-      type: "success",
-      text: `Appointment confirmed for ${newAppointment.name} on ${newAppointment.date} at ${newAppointment.timeSlot}!`
     });
+  }
 
-    // Reset form
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      service: SERVICES[0],
-      date: "",
-      timeSlot: ""
-    });
-  };
-
-  const handleCancel = (id) => {
+  function cancelAppointment(id) {
     const target = appointments.find((a) => a.id === id);
     if (!target) return;
 
-    if (window.confirm(`Are you sure you want to cancel the appointment for ${target.name} on ${target.date}?`)) {
-      setAppointments((prev) => prev.filter((a) => a.id !== id));
-      setMessage({ type: "info", text: "Appointment cancelled successfully. Time slot is now open." });
+    const confirmed = confirm(
+      `Cancel appointment ${target.id} for ${target.name} on ${target.date} at ${target.timeSlot}?`
+    );
+
+    if (confirmed) {
+      appointments = appointments.filter((a) => a.id !== id);
+      saveAppointments();
+      renderSlots();
+      renderAppointments();
+      showAlert(`Appointment ${id} has been cancelled. The time slot is now open.`, "success");
     }
-  };
+  }
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
 
-  return (
-    <div>
-      <header className="app-header">
-        <div className="container d-flex flex-wrap justify-content-between align-items-center">
-          <div>
-            <h1 className="h4 mb-0 fw-bold">Appointment Optimization & Scheduling</h1>
-            <small className="text-muted">GLA University | Mini Project 1 (Batch 06 - 3SD)</small>
-          </div>
-          <div className="mt-2 mt-md-0">
-            <span className="badge-tag me-2">React.js</span>
-            <span className="badge-tag me-2">localStorage</span>
-            <span className="badge-tag">No Backend Required</span>
-          </div>
-        </div>
-      </header>
+  // Form submission handler
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
 
-      <main className="container">
-        {message && (
-          <div className={`alert alert-${message.type} alert-dismissible fade show`} role="alert">
-            {message.text}
-            <button
-              type="button"
-              className="btn-close"
-              onClick={() => setMessage(null)}
-              aria-label="Close"
-            ></button>
-          </div>
-        )}
+    const name = userNameInput.value.trim();
+    const email = userEmailInput.value.trim();
+    const phone = userPhoneInput.value.trim();
+    const service = serviceTypeSelect.value;
+    const date = appointmentDateInput.value;
+    const timeSlot = selectedTimeSlotInput.value;
 
-        <div className="row g-4">
-          {/* Booking Form Column */}
-          <div className="col-lg-5">
-            <div className="booking-card p-4">
-              <h2 className="h5 fw-bold mb-3">Book an Appointment</h2>
-              <form onSubmit={handleSubmit}>
-                <div className="mb-3">
-                  <label className="form-label">Full Name</label>
-                  <input
-                    type="text"
-                    name="name"
-                    className="form-control form-control-sm"
-                    placeholder="e.g. John Doe"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
+    if (!name || !email || !phone) {
+      showAlert("Please enter all required patient contact details.", "danger");
+      return;
+    }
 
-                <div className="row g-2 mb-3">
-                  <div className="col-sm-6">
-                    <label className="form-label">Email Address</label>
-                    <input
-                      type="email"
-                      name="email"
-                      className="form-control form-control-sm"
-                      placeholder="name@example.com"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="col-sm-6">
-                    <label className="form-label">Phone Number</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      className="form-control form-control-sm"
-                      placeholder="10-digit number"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                </div>
+    if (!date) {
+      showAlert("Please select an appointment date.", "danger");
+      return;
+    }
 
-                <div className="mb-3">
-                  <label className="form-label">Select Service</label>
-                  <select
-                    name="service"
-                    className="form-select form-select-sm"
-                    value={formData.service}
-                    onChange={handleInputChange}
-                  >
-                    {SERVICES.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+    if (!timeSlot) {
+      showAlert("Please click and select an available time slot.", "danger");
+      return;
+    }
 
-                <div className="mb-3">
-                  <label className="form-label">Appointment Date</label>
-                  <input
-                    type="date"
-                    name="date"
-                    min={todayStr}
-                    className="form-control form-control-sm"
-                    value={formData.date}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
+    // Optimization & Collision Prevention Logic
+    const conflict = appointments.some(
+      (app) => app.date === date && app.timeSlot === timeSlot
+    );
 
-                <div className="mb-4">
-                  <label className="form-label d-block">
-                    Preferred Time Slot{" "}
-                    {formData.date ? (
-                      <span className="text-muted fw-normal" style={{ fontSize: "0.8rem" }}>
-                        ({bookedSlotsForDate.length} of {AVAILABLE_SLOTS.length} booked)
-                      </span>
-                    ) : (
-                      <span className="text-muted fw-normal" style={{ fontSize: "0.8rem" }}>
-                        (select date first)
-                      </span>
-                    )}
-                  </label>
+    if (conflict) {
+      showAlert(
+        `Conflict Detected: Slot ${timeSlot} on ${date} is already booked. Please pick another slot.`,
+        "danger"
+      );
+      renderSlots();
+      return;
+    }
 
-                  <div className="d-flex flex-wrap gap-2 mt-1">
-                    {AVAILABLE_SLOTS.map((slot) => {
-                      const isBooked = bookedSlotsForDate.includes(slot);
-                      const isSelected = formData.timeSlot === slot;
+    // Create New Appointment Record
+    const newId = "APT-2026-" + String(appointments.length + 101);
+    const newAppointment = {
+      id: newId,
+      name,
+      email,
+      phone,
+      service,
+      date,
+      timeSlot,
+      status: "Confirmed",
+      createdAt: new Date().toISOString()
+    };
 
-                      let btnClass = "btn slot-btn ";
-                      if (isSelected) {
-                        btnClass += "slot-selected";
-                      } else if (isBooked) {
-                        btnClass += "slot-booked";
-                      } else {
-                        btnClass += "slot-available";
-                      }
+    appointments.unshift(newAppointment);
+    saveAppointments();
 
-                      return (
-                        <button
-                          key={slot}
-                          type="button"
-                          className={btnClass}
-                          disabled={!formData.date || isBooked}
-                          onClick={() => handleSlotSelect(slot)}
-                        >
-                          {slot} {isBooked ? "(Booked)" : ""}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+    showAlert(
+      `Appointment ${newId} confirmed for ${name} on ${date} at ${timeSlot}!`,
+      "success"
+    );
 
-                <button type="submit" className="btn btn-primary w-100 fw-semibold">
-                  Confirm & Reserve Slot
-                </button>
-              </form>
-            </div>
-          </div>
+    // Reset Form Fields
+    form.reset();
+    appointmentDateInput.value = date; // keep date for convenience
+    selectedTimeSlotInput.value = "";
+    renderSlots();
+    renderAppointments();
+  });
 
-          {/* Appointments List Column */}
-          <div className="col-lg-7">
-            <div className="list-card p-4">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <h2 className="h5 fw-bold mb-0">Scheduled Appointments</h2>
-                <span className="badge bg-secondary">{appointments.length} Active</span>
-              </div>
+  // Date input listener
+  appointmentDateInput.addEventListener("change", () => {
+    selectedTimeSlotInput.value = "";
+    renderSlots();
+  });
 
-              {appointments.length === 0 ? (
-                <div className="empty-state">
-                  <p className="mb-1 fw-semibold">No appointments scheduled yet.</p>
-                  <small>Fill out the form on the left to book your first slot.</small>
-                </div>
-              ) : (
-                <div className="appointments-list">
-                  {appointments.map((app) => (
-                    <div key={app.id} className="appointment-item">
-                      <div className="d-flex justify-content-between align-items-start">
-                        <div>
-                          <div className="d-flex align-items-center gap-2">
-                            <span className="client-name">{app.name}</span>
-                            <span className="service-badge">{app.service}</span>
-                          </div>
-                          <div className="text-muted small mt-1">
-                            <span>📞 {app.phone}</span> | <span>✉️ {app.email}</span>
-                          </div>
-                          <div className="mt-2 fw-medium small">
-                            <span className="text-dark">📅 Date: {app.date}</span> &nbsp;|&nbsp;{" "}
-                            <span className="text-primary">🕒 Slot: {app.timeSlot}</span>
-                          </div>
-                        </div>
-                        <button
-                          className="btn btn-outline-danger btn-sm"
-                          onClick={() => handleCancel(app.id)}
-                          title="Cancel appointment"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
-  );
-}
+  // Search input listener
+  searchInput.addEventListener("input", (e) => {
+    searchQuery = e.target.value.trim();
+    renderAppointments();
+  });
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<App />);
+  // Filter Buttons
+  filterBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      filterBtns.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentFilter = btn.getAttribute("data-filter");
+      renderAppointments();
+    });
+  });
+
+  // Initialization
+  function init() {
+    loadInitialData();
+
+    // Set minimum date to today
+    const today = getTodayString(0);
+    appointmentDateInput.min = today;
+    appointmentDateInput.value = today;
+
+    renderSlots();
+    renderAppointments();
+    updateStats();
+  }
+
+  // Run on DOM Ready
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();

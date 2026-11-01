@@ -94,25 +94,32 @@ User enters details -> Selects date & slot -> App validates slot availability
 
 ## How to Run Locally
 
-You do not need to install Node or run a build step. The frontend runs directly in any browser:
+You can run the application directly in any browser or with the included local server:
 
+### Option 1: Quick Start (Node.js Server)
 1. Clone the repository:
    ```bash
    git clone https://github.com/SecuVortex/Appointment-Optimization-Scheduling.git
    cd Appointment-Optimization-Scheduling
    ```
+2. Start the local server:
+   ```bash
+   npm start
+   ```
+3. Open your browser at `http://localhost:3000`.
 
-2. Open `index.html` in any web browser (double-click the file or use VS Code Live Server).
-
-3. Fill out the form, choose a date and time slot, and click **Confirm & Reserve Slot**.
+### Option 2: Direct Browser Launch
+Simply double-click `index.html` to open it directly in Google Chrome, Microsoft Edge, or Firefox.
 
 ---
 
 ## Project Files
 
-- `index.html` — Main HTML page loading React, Bootstrap, and the app script.
-- `style.css` — Custom styling for cards, slot states, and layout.
-- `app.js` — React application logic with slot conflict checking and `localStorage` handling.
+- `index.html` — Main HTML dashboard interface.
+- `style.css` — Custom stylesheet for cards, stats, and slot status badges.
+- `app.js` — Client-side scheduling engine, slot validation, conflict detection, and `localStorage` handler.
+- `server.js` — Lightweight zero-dependency Node.js HTTP server.
+- `package.json` — Project metadata and start scripts.
 - `Batch 6 Project_Synopsis (1).pdf` — Original project synopsis submitted to the department.
 - `Presentation  Batch 06.pptx` — Project presentation slides.
 

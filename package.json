@@ -1,0 +1,19 @@
+{
+  "name": "appointment-optimization-scheduling",
+  "version": "1.0.0",
+  "description": "Appointment Optimization & Scheduling System - GLA University Mini Project 1",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "appointment-scheduling",
+    "slot-optimization",
+    "localstorage",
+    "javascript",
+    "gla-university"
+  ],
+  "author": "SecuVortex",
+  "license": "MIT"
+}
