@@ -1,0 +1,110 @@
+:root {
+  --primary-color: #0d6efd;
+  --primary-hover: #0b5ed7;
+  --bg-light: #f8f9fa;
+  --card-bg: #ffffff;
+  --border-color: #dee2e6;
+  --text-dark: #212529;
+  --text-muted: #6c757d;
+  --booked-color: #dc3545;
+  --avail-color: #198754;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--bg-light);
+  color: var(--text-dark);
+  min-height: 100vh;
+  padding-bottom: 2rem;
+}
+
+.app-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--border-color);
+  padding: 1.25rem 0;
+  margin-bottom: 2rem;
+}
+
+.badge-tag {
+  font-size: 0.8rem;
+  background-color: #e9ecef;
+  color: #495057;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+}
+
+.booking-card,
+.list-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.form-label {
+  font-weight: 500;
+  font-size: 0.9rem;
+  margin-bottom: 0.35rem;
+}
+
+.slot-btn {
+  font-size: 0.85rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 6px;
+  transition: all 0.15s ease-in-out;
+}
+
+.slot-available {
+  border: 1px solid #198754;
+  color: #198754;
+  background: #ffffff;
+}
+
+.slot-available:hover {
+  background: #198754;
+  color: #ffffff;
+}
+
+.slot-selected {
+  background: #0d6efd !important;
+  color: #ffffff !important;
+  border-color: #0d6efd !important;
+}
+
+.slot-booked {
+  background: #f8d7da;
+  border: 1px solid #f5c2c7;
+  color: #842029;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.appointment-item {
+  border-left: 4px solid var(--primary-color);
+  background-color: #ffffff;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  border-top: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.appointment-item .client-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.appointment-item .service-badge {
+  font-size: 0.75rem;
+  background-color: #e0f2fe;
+  color: #0369a1;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--text-muted);
+}
